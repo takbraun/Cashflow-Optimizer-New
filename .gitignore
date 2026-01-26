@@ -1,0 +1,41 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+*.sqlite3
+instance/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gunicorn
+gunicorn.pid
+nohup.out
+
+# Backup files
+*_backup_*
+*_broken_*

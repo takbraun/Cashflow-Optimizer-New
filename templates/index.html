@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashflow Optimizer - Gestión Financiera Personal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        * {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Smooth transitions */
+        input, select, button, textarea {
+            transition: all 200ms ease-in-out;
+        }
+
+        /* Focus styles for accessibility */
+        button:focus-visible, input:focus-visible, select:focus-visible {
+            outline: 2px solid #6366f1;
+            outline-offset: 2px;
+        }
+
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Card hover effect */
+        .card-hover {
+            transition: all 250ms ease-in-out;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Badge animations */
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .animate-pulse-subtle {
+            animation: pulse-subtle 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50" x-data="app()" x-init="loadDashboard(); loadSavedRecommendations()">
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 bg-white border-b border-slate-200 backdrop-blur-xl bg-white/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
+                    <span class="text-lg font-bold text-white">💰</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">Cashflow Optimizer</h1>
+                    <p class="text-xs text-slate-500">Gestión inteligente de finanzas personales</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button @click="showAIChat = true"
+                        class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors"
+                        title="Abrir asistente AI (Alt+A)"
+                        aria-label="Abrir asistente AI">
+                    <span>🤖</span>
+                    <span class="text-sm">AI Assistant</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Hero Metrics Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+            <!-- Checking Balance Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 card-hover">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-medium text-slate-600 mb-1">Cuenta Corriente</p>
+                        <p class="text-3xl font-bold text-slate-900">$<span x-text="formatNumber(checkingBalance)"></span></p>
+                    </div>
+                    <div class="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center">
+                        <span class="text-xl">🏦</span>
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-4 border-t border-slate-100">
+                    <button @click="showDepositModal = true"
+                            class="flex-1 px-3 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 font-medium text-sm transition-colors"
+                            aria-label="Registrar depósito">
+                        Depositar
+                    </button>
+                    <button @click="showWithdrawModal = true"
+                            class="flex-1 px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-medium text-sm transition-colors"
+                            aria-label="Registrar retiro">
+                        Retirar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Savings Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 card-hover">
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-slate-600 mb-1">Fondo de Emergencia</p>
+                    <p class="text-3xl font-bold text-slate-900">$<span x-text="formatNumber(savings.balance)"></span></p>
+                    <p class="text-xs text-slate-500 mt-1">Meta: $<span x-text="formatNumber(savings.target)"></span></p>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs text-slate-600">
+                        <span>Progreso</span>
+                        <span class="font-semibold text-slate-900"><span x-text="Math.round(savings.progress_pct)"></span>%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div class="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-500"
+                             :style="'width: ' + savings.progress_pct + '%'"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Paycheck Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 card-hover">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-medium text-slate-600 mb-1">Próxima Nómina</p>
+                        <p class="text-3xl font-bold text-slate-900">$<span x-text="formatNumber(income?.amount || 0)"></span></p>
+                    </div>
+                    <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                        <span class="text-xl">💵</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500" x-text="income?.next_paycheck_formatted || 'No configurada'"></p>
+                <p x-show="income?.days_until_paycheck !== null" class="text-xs text-green-600 font-semibold mt-2"
+                   x-text="income?.days_until_paycheck === 0 ? '¡Hoy!' : (income?.days_until_paycheck === 1 ? 'Mañana' : 'En ' + income?.days_until_paycheck + ' días')"></p>
+            </div>
+
+            <!-- Total Debt Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 card-hover">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-medium text-slate-600 mb-1">Deuda Total</p>
+                        <p class="text-3xl font-bold text-slate-900">$<span x-text="formatNumber(debtSummary.total_debt)"></span></p>
+                    </div>
+                    <div class="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
+                        <span class="text-xl">💳</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-600"><span x-text="debtSummary.closed_cards.length + debtSummary.open_cards.length"></span> tarjetas configuradas</p>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+
+            <!-- Left Column: Main Features -->
+            <div class="lg:col-span-2 space-y-8">
+
+                <!-- Smart Card Recommender -->
+                <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                    <div class="mb-6">
+                        <h2 class="text-2xl font-bold text-slate-900 mb-2">Recomendador Inteligente</h2>
+                        <p class="text-slate-600">Obtén la mejor tarjeta para tu próxima compra</p>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- Input Row -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-900 mb-2">Monto de Compra *</label>
+                                <input type="number" x-model.number="purchaseAmount"
+                                       class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50"
+                                       placeholder="500.00" step="0.01" aria-label="Monto de compra">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-900 mb-2">Fecha (Opcional)</label>
+                                <input type="date" x-model="purchaseDate"
+                                       class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50"
+                                       aria-label="Fecha de compra">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-900 mb-2">Descripción (Opcional)</label>
+                                <input type="text" x-model="purchaseDescription"
+                                       class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50"
+                                       placeholder="iPhone 15"
+                                       aria-label="Descripción de compra">
+                            </div>
+                        </div>
+
+                        <!-- Deferred Payment Section -->
+                        <div class="border-2 border-indigo-100 rounded-lg p-6 bg-indigo-50">
+                            <label class="flex items-center gap-3 cursor-pointer mb-4">
+                                <input type="checkbox" x-model="isDeferred" class="w-5 h-5 text-indigo-600 rounded">
+                                <span class="font-semibold text-slate-900">Diferir compra en pagos</span>
+                            </label>
+
+                            <div x-show="isDeferred" class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-indigo-200">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Número de Pagos</label>
+                                    <select x-model.number="numPayments"
+                                            class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white">
+                                        <option value="3">3 pagos</option>
+                                        <option value="6">6 pagos</option>
+                                        <option value="9">9 pagos</option>
+                                        <option value="12">12 pagos</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Frecuencia</label>
+                                    <select x-model="paymentFrequency"
+                                            class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white">
+                                        <option value="weekly">Semanal</option>
+                                        <option value="biweekly">Quincenal</option>
+                                        <option value="monthly">Mensual</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Por Pago</label>
+                                    <div class="px-4 py-2 bg-white rounded-lg border border-slate-300">
+                                        <p class="text-sm text-slate-600">$<span x-text="purchaseAmount && numPayments ? formatNumber(purchaseAmount / numPayments) : '0.00'"></span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CTA Button -->
+                        <button @click="getRecommendation()"
+                                class="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:shadow-lg transition-all hover:from-indigo-700 hover:to-purple-700"
+                                aria-label="Obtener recomendación de tarjeta">
+                            🔍 Obtener Recomendación
+                        </button>
+                    </div>
+
+                    <!-- Liquidity Analysis Results -->
+                    <div x-show="liquidityAnalysis" class="mt-8 pt-8 border-t border-slate-200">
+                        <!-- Critical Status -->
+                        <div x-show="liquidityAnalysis && liquidityAnalysis.liquidity_status === 'critical'"
+                             class="rounded-lg p-6 bg-red-50 border-2 border-red-200">
+                            <div class="flex items-start gap-3 mb-4">
+                                <span class="text-3xl" x-text="liquidityAnalysis?.status_emoji"></span>
+                                <div>
+                                    <h3 class="font-bold text-red-900 text-lg" x-text="liquidityAnalysis?.status_text"></h3>
+                                    <p class="text-sm text-red-700 mt-1" x-text="liquidityAnalysis?.warning"></p>
+                                </div>
+                            </div>
+                            <div class="space-y-3 text-sm text-slate-700 bg-white rounded-lg p-4">
+                                <div class="flex justify-between">
+                                    <span>Balance actual:</span>
+                                    <span class="font-semibold">$<span x-text="formatNumber(liquidityAnalysis?.current_checking)"></span></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Balance proyectado:</span>
+                                    <span class="font-semibold text-red-600">$<span x-text="formatNumber(liquidityAnalysis?.projected_balance)"></span></span>
+                                </div>
+                                <div class="pt-3 border-t flex justify-between">
+                                    <span>Quedaría disponible:</span>
+                                    <span class="font-bold text-red-700">$<span x-text="formatNumber(liquidityAnalysis?.remaining_after_purchase)"></span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tight Status -->
+                        <div x-show="liquidityAnalysis && liquidityAnalysis.liquidity_status === 'tight'"
+                             class="rounded-lg p-6 bg-yellow-50 border-2 border-yellow-200">
+                            <div class="flex items-start gap-3 mb-4">
+                                <span class="text-3xl" x-text="liquidityAnalysis?.status_emoji"></span>
+                                <div>
+                                    <h3 class="font-bold text-yellow-900 text-lg" x-text="liquidityAnalysis?.status_text"></h3>
+                                    <p class="text-sm text-yellow-700 mt-1">Tienes liquidez, pero ajustado</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Safe Status -->
+                        <div x-show="liquidityAnalysis && liquidityAnalysis.liquidity_status === 'safe'"
+                             class="rounded-lg p-6 bg-green-50 border-2 border-green-200">
+                            <div class="flex items-start gap-3">
+                                <span class="text-3xl">✅</span>
+                                <div>
+                                    <h3 class="font-bold text-green-900 text-lg">Balance Seguro</h3>
+                                    <p class="text-sm text-green-700 mt-1">Tienes liquidez suficiente para esta compra</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Recommendations -->
+                    <div x-show="recommendations.length > 0" class="mt-8 pt-8 border-t border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-900 mb-4">Tarjetas Recomendadas</h3>
+                        <div class="space-y-4">
+                            <template x-for="(rec, index) in recommendations" :key="rec.card_id">
+                            <div class="rounded-lg border-2 p-6"
+                                 :class="{
+                                     'border-green-500 bg-green-50': index === 0,
+                                     'border-blue-500 bg-blue-50': index === 1,
+                                     'border-slate-300 bg-white': index > 1
+                                 }">
+
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-3xl" x-text="index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'"></span>
+                                        <div>
+                                            <h4 class="font-bold text-lg text-slate-900" x-text="rec.card_name"></h4>
+                                            <p class="text-sm text-slate-600">Score: <span class="font-semibold" x-text="rec.score"></span>/100</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs text-slate-600">Disponible:</p>
+                                        <p class="font-semibold text-slate-900">$<span x-text="formatNumber(rec.projected_balance)"></span></p>
+                                    </div>
+                                </div>
+
+                                <p class="text-sm text-slate-700 mb-4" x-text="rec.reasoning"></p>
+                            </div>
+                        </template>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Credit Cards Overview -->
+                <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-slate-900">Tarjetas de Crédito</h2>
+                        <button @click="showAddCardModal = true"
+                                class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium transition-colors"
+                                aria-label="Agregar nueva tarjeta">
+                            + Agregar
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <template x-for="card in cards" :key="card.id">
+                            <div class="border border-slate-200 rounded-lg p-6 card-hover">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div>
+                                        <h3 class="font-bold text-lg text-slate-900" x-text="card.name"></h3>
+                                        <p class="text-sm text-slate-600">Límite: $<span x-text="formatNumber(card.credit_limit)"></span></p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button @click="editCard(card)" class="p-2 hover:bg-slate-100 rounded text-slate-600 hover:text-indigo-600" title="Editar" aria-label="Editar tarjeta">✏️</button>
+                                        <button @click="deleteCard(card)" class="p-2 hover:bg-slate-100 rounded text-slate-600 hover:text-red-600" title="Eliminar" aria-label="Eliminar tarjeta">🗑️</button>
+                                    </div>
+                                </div>
+
+                                <!-- Utilization -->
+                                <div class="mb-4 pb-4 border-b border-slate-200">
+                                    <div class="flex justify-between items-center text-sm mb-2">
+                                        <span class="text-slate-600">Utilización</span>
+                                        <span class="font-semibold" x-text="Math.round(card.utilization) + '%'"></span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 rounded-full h-2">
+                                        <div class="h-2 rounded-full transition-all"
+                                             :class="{
+                                                 'bg-green-500': card.utilization < 30,
+                                                 'bg-yellow-500': card.utilization >= 30 && card.utilization < 70,
+                                                 'bg-red-500': card.utilization >= 70
+                                             }"
+                                             :style="'width: ' + Math.min(100, card.utilization) + '%'"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Balances -->
+                                <div class="space-y-3">
+                                    <div x-show="card.closed_statement.balance > 0" class="bg-red-50 rounded-lg p-3 border border-red-200">
+                                        <p class="text-xs font-semibold text-red-700">📋 Estado Cerrado</p>
+                                        <p class="text-lg font-bold text-red-700 mt-1">$<span x-text="formatNumber(card.closed_statement.balance)"></span></p>
+                                        <p class="text-xs text-red-600 mt-1">Vence en <span x-text="card.closed_statement.days_until_payment"></span> días</p>
+                                    </div>
+
+                                    <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                        <p class="text-xs font-semibold text-blue-700">🆕 Estado Abierto</p>
+                                        <p class="text-lg font-bold text-blue-700 mt-1">$<span x-text="formatNumber(card.open_statement.balance)"></span></p>
+                                        <p class="text-xs text-blue-600 mt-1">Corta en <span x-text="card.open_statement.days_until_close"></span> días</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </section>
+
+                <!-- GASTOS FIJOS Y VARIABLES SECTION -->
+                <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                    <h2 class="text-2xl font-bold text-slate-900 mb-2">Gestión de Gastos</h2>
+                    <p class="text-slate-600 mb-6">Control de gastos fijos y variables</p>
+
+                    <!-- Update Balance & Pay Card Cards -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                        <!-- Update Balance -->
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
+                            <h3 class="text-lg font-bold text-blue-900 mb-4">💰 Actualizar Balance</h3>
+                            <p class="text-sm text-slate-600 mb-4">Balance actual: $<span x-text="formatNumber(checkingBalance)"></span></p>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Nuevo balance</label>
+                                <input type="number" x-model="newBalance" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" placeholder="2452.50" step="0.01">
+                            </div>
+                            <button @click="updateBalance()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 font-semibold">
+                                Actualizar Balance
+                            </button>
+                        </div>
+
+                        <!-- Pay Credit Card -->
+                        <div class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200 p-6">
+                            <h3 class="text-lg font-bold text-purple-900 mb-4">💳 Pagar Tarjeta de Crédito</h3>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Tarjeta</label>
+                                <select x-model="cardPayment.card_id" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white">
+                                    <option value="">Seleccionar tarjeta...</option>
+                                    <template x-for="card in cards" :key="card.id">
+                                        <option :value="card.id" x-text="card.name + ' - $' + formatNumber(card.closed_statement.balance + card.open_statement.balance)"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-1 gap-3 mb-4" x-show="cardPayment.card_id">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Monto a pagar</label>
+                                    <input type="number" x-model="cardPayment.amount" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white" placeholder="Monto" step="0.01">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Fecha de pago</label>
+                                    <input type="date" x-model="cardPayment.payment_date" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white">
+                                </div>
+                            </div>
+                            <button @click="payCard()" :disabled="!cardPayment.card_id" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-indigo-700 font-semibold disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed">
+                                Pagar Tarjeta
+                            </button>
+                        </div>
+
+                        <!-- Monthly Summary Card -->
+                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200 p-6">
+                            <h3 class="text-lg font-bold text-green-900 mb-4">📊 Gastos Este Mes</h3>
+                            <div class="space-y-3 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-700">Fijos Pagados:</span>
+                                    <span class="font-bold text-green-700">$<span x-text="formatNumber(monthSummary.total_fixed_paid)"></span></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-700">Fijos Pendientes:</span>
+                                    <span class="font-bold text-orange-700">$<span x-text="formatNumber(monthSummary.fixed_unpaid.reduce((sum, e) => sum + e.amount, 0))"></span></span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t border-green-200">
+                                    <span class="text-slate-700">Variables:</span>
+                                    <span class="font-bold text-slate-900">$<span x-text="formatNumber(monthSummary.total_variable)"></span></span>
+                                </div>
+                                <div class="flex justify-between border-t border-green-200 pt-2">
+                                    <span class="font-semibold text-slate-900">TOTAL:</span>
+                                    <span class="font-bold text-lg text-slate-900">$<span x-text="formatNumber(monthSummary.total_fixed_paid + monthSummary.total_variable + (monthSummary.total_card_payments || 0))"></span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fixed Expenses Grid Metrics -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                        <div class="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+                            <p class="text-xs text-green-700 font-semibold mb-1">✅ Pagados</p>
+                            <p class="text-2xl font-bold text-green-600">$<span x-text="formatNumber(monthSummary.total_fixed_paid)"></span></p>
+                            <p class="text-xs text-slate-600 mt-1"><span x-text="monthSummary.fixed_paid.length"></span> gastos</p>
+                        </div>
+                        <div class="border-2 border-orange-200 rounded-lg p-4 bg-orange-50">
+                            <p class="text-xs text-orange-700 font-semibold mb-1">⏳ Pendientes</p>
+                            <p class="text-2xl font-bold text-orange-600">$<span x-text="formatNumber(monthSummary.fixed_unpaid.reduce((sum, e) => sum + e.amount, 0))"></span></p>
+                            <p class="text-xs text-slate-600 mt-1"><span x-text="monthSummary.fixed_unpaid.length"></span> gastos</p>
+                        </div>
+                        <div class="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
+                            <p class="text-xs text-purple-700 font-semibold mb-1">🛒 Variables</p>
+                            <p class="text-2xl font-bold text-purple-600">$<span x-text="formatNumber(monthSummary.total_variable)"></span></p>
+                            <p class="text-xs text-slate-600 mt-1"><span x-text="monthSummary.variable_expenses.length"></span> transacciones</p>
+                        </div>
+                        <div class="border-2 border-indigo-200 rounded-lg p-4 bg-indigo-50">
+                            <p class="text-xs text-indigo-700 font-semibold mb-1">💰 Pagos Tarjeta</p>
+                            <p class="text-2xl font-bold text-indigo-600">$<span x-text="formatNumber(monthSummary.total_card_payments || 0)"></span></p>
+                            <p class="text-xs text-slate-600 mt-1"><span x-text="(monthSummary.card_payments || []).length"></span> pagos</p>
+                        </div>
+                    </div>
+
+                    <!-- Pending Fixed Expenses -->
+                    <div x-show="monthSummary.fixed_unpaid.length > 0" class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-lg text-slate-900">Gastos Fijos Pendientes de Pago</h3>
+                            <button @click="showAddFixedExpenseModal()" class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold text-sm">
+                                + Agregar
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            <template x-for="expense in monthSummary.fixed_unpaid" :key="expense.id">
+                                <div class="flex justify-between items-center bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                                    <div class="flex-1">
+                                        <span class="font-semibold text-slate-900" x-text="expense.name"></span>
+                                        <span class="text-xs text-slate-500 ml-3">Día <span x-text="expense.due_day"></span></span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-bold text-lg text-slate-900">$<span x-text="formatNumber(expense.amount)"></span></span>
+                                        <button @click="markFixedExpensePaid(expense.id)" class="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 text-sm font-semibold px-4 py-2 rounded-lg transition-all">
+                                            ✓ Pagar
+                                        </button>
+                                        <button @click="editFixedExpense(expense)" class="text-blue-600 hover:text-blue-800 text-lg">
+                                            ✏️
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Variable Expenses Form -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-bold text-lg text-slate-900" x-text="editingVariableExpense ? '✏️ Editar Gasto Variable' : '🛒 Registrar Gasto Variable'"></h3>
+                            <button x-show="editingVariableExpense" @click="cancelEditVariableExpense()" class="text-sm text-slate-600 hover:text-slate-800 px-3 py-1">
+                                ❌ Cancelar
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 p-6 bg-slate-50 rounded-lg border border-slate-200">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-sm font-medium text-slate-700">Categoría</label>
+                                    <button @click="showCategoryModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold" title="Gestionar categorías">
+                                        ⚙️
+                                    </button>
+                                </div>
+                                <select x-model="variableExpense.category" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white">
+                                    <template x-for="cat in expenseCategories" :key="cat.id">
+                                        <option :value="cat.name" x-text="cat.icon + ' ' + cat.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Monto</label>
+                                <input type="number" x-model="variableExpense.amount" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white" placeholder="50.00" step="0.01">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Tarjeta/Efectivo</label>
+                                <select x-model="variableExpense.card_id" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white">
+                                    <option value="">Efectivo/Débito</option>
+                                    <template x-for="card in cards" :key="card.id">
+                                        <option :value="card.id" x-text="card.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Fecha</label>
+                                <input type="date" x-model="variableExpense.expense_date" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
+                                <input type="text" x-model="variableExpense.description" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white" placeholder="Ej: Walmart">
+                            </div>
+                        </div>
+                        <button @click="editingVariableExpense ? saveEditVariableExpense() : addVariableExpense()" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 font-semibold" x-text="editingVariableExpense ? 'Guardar Cambios' : 'Registrar Gasto'">
+                        </button>
+                    </div>
+
+                    <!-- Variable Expenses This Month -->
+                    <div x-show="monthSummary.variable_expenses && monthSummary.variable_expenses.length > 0" class="mb-8 pt-8 border-t border-slate-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-lg text-slate-900">📋 Gastos Variables del Mes</h3>
+                            <span class="text-sm text-slate-600">
+                                <span x-text="monthSummary.variable_expenses.length"></span> gastos -
+                                $<span x-text="formatNumber(monthSummary.total_variable)"></span>
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <template x-for="expense in monthSummary.variable_expenses" :key="expense.id">
+                                <div class="flex justify-between items-center bg-orange-50 border border-orange-200 p-4 rounded-lg">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-semibold text-slate-900" x-text="expense.category"></span>
+                                            <span class="text-xs text-slate-500" x-text="expense.description" x-show="expense.description"></span>
+                                        </div>
+                                        <div class="flex items-center gap-3 mt-2 text-xs text-slate-600">
+                                            <span x-text="new Date(expense.expense_date).toLocaleDateString('es-MX', {day: 'numeric', month: 'short'})"></span>
+                                            <span x-show="expense.card_name" class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                                💳 <span x-text="expense.card_name"></span>
+                                            </span>
+                                            <span x-show="!expense.card_name" class="bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                                                💵 Efectivo
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-lg font-bold text-orange-600">$<span x-text="formatNumber(expense.amount)"></span></span>
+                                        <button @click="editVariableExpense(expense)" class="text-blue-600 hover:text-blue-800 text-lg" title="Editar">
+                                            ✏️
+                                        </button>
+                                        <button @click="deleteVariableExpense(expense.id)" class="text-red-600 hover:text-red-800 text-lg" title="Eliminar">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Card Payments This Month -->
+                    <div x-show="(monthSummary.card_payments || []).length > 0" class="pt-8 border-t border-slate-200">
+                        <h3 class="font-bold text-lg text-slate-900 mb-4">Pagos a Tarjetas Este Mes</h3>
+                        <div class="space-y-2">
+                            <template x-for="payment in monthSummary.card_payments" :key="payment.id">
+                                <div class="flex justify-between items-center bg-indigo-50 border border-indigo-200 p-4 rounded-lg">
+                                    <div>
+                                        <span class="font-medium text-slate-900" x-text="payment.card_name"></span>
+                                        <span class="text-xs text-slate-500 ml-2" x-text="formatDate(payment.payment_date)"></span>
+                                    </div>
+                                    <span class="font-semibold text-indigo-700">$<span x-text="formatNumber(payment.amount)"></span></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: AI Chat Sidebar -->
+            <aside class="hidden lg:block">
+                <div class="sticky top-24 space-y-4">
+                    <!-- AI Chat Widget -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[600px]">
+                        <!-- Header -->
+                        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                                    <span class="text-lg">🤖</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold">Asistente IA</h3>
+                                    <p class="text-xs text-purple-100">Análisis financiero en vivo</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="p-3 border-b border-slate-200 bg-slate-50">
+                            <div class="space-y-2">
+                                <template x-for="action in aiQuickActions" :key="action.action">
+                                    <button @click="executeQuickAction(action.action)" :disabled="aiChatLoading" class="w-full text-left text-xs px-3 py-2 rounded bg-white border border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 transition-colors disabled:opacity-50" :aria-label="action.label">
+                                        <span x-text="action.label"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Messages -->
+                        <div id="ai-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3">
+                            <!-- Welcome -->
+                            <div x-show="aiChatMessages.length === 0" class="text-center text-slate-500 py-8">
+                                <p class="text-2xl mb-2">👋</p>
+                                <p class="font-medium text-sm">¡Hola! Soy tu asistente IA</p>
+                                <p class="text-xs mt-2">Usa los botones arriba o escribe tus preguntas</p>
+                            </div>
+
+                            <!-- Chat -->
+                            <template x-for="(msg, index) in aiChatMessages" :key="index">
+                                <div :class="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
+                                    <div :class="msg.role === 'user' ? 'bg-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-2 max-w-[85%]' : 'bg-slate-100 text-slate-900 rounded-2xl rounded-bl-md px-4 py-2 max-w-[85%]'">
+                                        <p class="text-sm whitespace-pre-wrap" x-text="msg.content"></p>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Loading -->
+                            <div x-show="aiChatLoading" class="flex justify-start">
+                                <div class="bg-slate-100 rounded-2xl rounded-bl-md px-4 py-3">
+                                    <div class="flex gap-1">
+                                        <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span>
+                                        <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+                                        <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Input -->
+                        <div class="p-4 border-t border-slate-200 bg-white">
+                            <form @submit.prevent="sendAIMessage()" class="flex gap-2">
+                                <input type="text" x-model="aiChatInput" :disabled="aiChatLoading" placeholder="Tu pregunta..." class="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm bg-slate-50" aria-label="Mensaje para asistente AI">
+                                <button type="submit" :disabled="aiChatLoading || !aiChatInput.trim()" class="p-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-50" aria-label="Enviar mensaje">
+                                    ➤
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats Card -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <h3 class="font-bold text-slate-900 mb-4">Resumen Rápido</h3>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">Tarjetas</span>
+                                <span class="font-semibold text-slate-900" x-text="cards.length"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">Deuda Total</span>
+                                <span class="font-semibold text-slate-900">$<span x-text="formatNumber(debtSummary.total_debt)"></span></span>
+                            </div>
+                            <div class="flex justify-between pt-3 border-t border-slate-200">
+                                <span class="text-slate-600">Utilización Prom.</span>
+                                <span class="font-semibold text-slate-900" x-text="cards.length > 0 ? Math.round(cards.reduce((sum, c) => sum + c.utilization, 0) / cards.length) + '%' : '0%'"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Debt Summary Section -->
+        <section x-show="debtSummary.closed_cards.length > 0 || debtSummary.open_cards.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 mb-8">
+            <h2 class="text-2xl font-bold text-slate-900 mb-6">Resumen de Deuda</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <p class="text-xs text-red-700 font-semibold mb-1">A Pagar Este Mes</p>
+                    <p class="text-2xl font-bold text-red-600">$<span x-text="formatNumber(debtSummary.total_closed)"></span></p>
+                    <p class="text-xs text-red-600 mt-1"><span x-text="debtSummary.closed_cards.length"></span> estado(s)</p>
+                </div>
+
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <p class="text-xs text-blue-700 font-semibold mb-1">Acumulando</p>
+                    <p class="text-2xl font-bold text-blue-600">$<span x-text="formatNumber(debtSummary.total_open)"></span></p>
+                    <p class="text-xs text-blue-600 mt-1"><span x-text="debtSummary.open_cards.length"></span> estado(s)</p>
+                </div>
+
+                <div class="bg-slate-100 rounded-lg p-4 border-2 border-slate-900">
+                    <p class="text-xs text-slate-700 font-semibold mb-1">Total Deuda</p>
+                    <p class="text-2xl font-bold text-slate-900">$<span x-text="formatNumber(debtSummary.total_debt)"></span></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Closed (Due Soon) -->
+                <div x-show="debtSummary.closed_cards.length > 0">
+                    <h3 class="font-bold text-red-700 mb-3">⚠️ Vencimientos Próximos</h3>
+                    <div class="space-y-2">
+                        <template x-for="card in debtSummary.closed_cards" :key="card.name">
+                            <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-500">
+                                <p class="font-semibold text-slate-900" x-text="card.name"></p>
+                                <p class="text-sm text-slate-600 mt-1">Vence: <span x-text="formatDate(card.payment_date)"></span> (<span x-text="card.days_until_payment + ' días'"></span>)</p>
+                                <p class="text-lg font-bold text-red-600 mt-2">$<span x-text="formatNumber(card.balance)"></span></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Open (Future) -->
+                <div x-show="debtSummary.open_cards.length > 0">
+                    <h3 class="font-bold text-blue-700 mb-3">📊 Acumulando (Próximo Mes)</h3>
+                    <div class="space-y-2">
+                        <template x-for="card in debtSummary.open_cards" :key="card.name">
+                            <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+                                <p class="font-semibold text-slate-900" x-text="card.name"></p>
+                                <p class="text-sm text-slate-600 mt-1">Pagar: <span x-text="formatDate(card.payment_date)"></span> (<span x-text="card.days_until_payment + ' días'"></span>)</p>
+                                <p class="text-lg font-bold text-blue-600 mt-2">$<span x-text="formatNumber(card.balance)"></span></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Saved Recommendations Table -->
+        <section x-show="savedRecommendations.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 mb-8">
+            <h2 class="text-2xl font-bold text-slate-900 mb-6">Recomendaciones Guardadas</h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-200">
+                            <th class="px-4 py-3 text-left font-semibold text-slate-900">Fecha</th>
+                            <th class="px-4 py-3 text-left font-semibold text-slate-900">Descripción</th>
+                            <th class="px-4 py-3 text-right font-semibold text-slate-900">Monto</th>
+                            <th class="px-4 py-3 text-left font-semibold text-slate-900">Tarjeta</th>
+                            <th class="px-4 py-3 text-center font-semibold text-slate-900">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <template x-for="rec in savedRecommendations" :key="rec.id">
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3 text-slate-600" x-text="formatDate(rec.purchase_date)"></td>
+                                <td class="px-4 py-3 text-slate-900" x-text="rec.description || 'Compra'"></td>
+                                <td class="px-4 py-3 text-right font-semibold text-slate-900">$<span x-text="formatNumber(rec.amount)"></span></td>
+                                <td class="px-4 py-3 text-slate-900" x-text="rec.recommended_card_name"></td>
+                                <td class="px-4 py-3 text-center">
+                                    <span x-show="rec.liquidity_status === 'safe'" class="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">✅ Ahora</span>
+                                    <span x-show="rec.liquidity_status === 'tight'" class="inline-block px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">⚠️ Ajustado</span>
+                                    <span x-show="rec.liquidity_status === 'critical'" class="inline-block px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">❌ Esperar</span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- MODALS SECTION -->
+    
+    <!-- Payment Method Modal -->
+    <div x-show="showPaymentModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showPaymentModal = false">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4 text-blue-700">💳 Registrar Pago de Gasto Fijo</h2>
+
+            <div class="space-y-4">
+                <!-- Expense Info -->
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <p class="text-sm text-slate-600">Gasto:</p>
+                    <p class="text-lg font-bold" x-text="paymentForm.expense_name"></p>
+                    <p class="text-2xl font-bold text-blue-700 mt-1">$<span x-text="formatNumber(paymentForm.expense_amount)"></span></p>
+                </div>
+
+                <!-- Payment Method Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">¿Cómo se pagó?</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50" :class="paymentForm.payment_method === 'cash' ? 'border-blue-500 bg-blue-50' : 'border-slate-300'">
+                            <input type="radio" x-model="paymentForm.payment_method" value="cash" class="mr-3">
+                            <div>
+                                <div class="font-semibold">💵 Efectivo / Débito</div>
+                                <div class="text-xs text-slate-600">Se descontará de cuenta de cheques</div>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50" :class="paymentForm.payment_method === 'card' ? 'border-blue-500 bg-blue-50' : 'border-slate-300'">
+                            <input type="radio" x-model="paymentForm.payment_method" value="card" class="mr-3">
+                            <div>
+                                <div class="font-semibold">💳 Tarjeta de Crédito</div>
+                                <div class="text-xs text-slate-600">Se agregará al saldo de la tarjeta</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Card Selection -->
+                <div x-show="paymentForm.payment_method === 'card'" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Selecciona tarjeta:</label>
+                        <select x-model="paymentForm.card_id" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="">-- Selecciona una tarjeta --</option>
+                            <template x-for="card in cards" :key="card.id">
+                                <option :value="card.id" x-text="card.name"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Already in balance checkbox -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <label class="flex items-start cursor-pointer">
+                            <input type="checkbox" x-model="paymentForm.already_in_balance" class="mt-1 mr-3">
+                            <div>
+                                <div class="font-semibold text-sm">☑️ Este cargo ya está incluido en el saldo actual de la tarjeta</div>
+                                <div class="text-xs text-slate-600 mt-1">
+                                    Marca esto si ya actualizaste manualmente el saldo de la tarjeta incluyendo este gasto.
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Impact preview -->
+                    <div x-show="paymentForm.card_id" class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-slate-700">
+                        <p class="font-semibold mb-1">Impacto en tarjeta:</p>
+                        <p x-show="!paymentForm.already_in_balance">Se agregará al saldo ABIERTO de la tarjeta</p>
+                        <p x-show="paymentForm.already_in_balance">Saldo sin cambios (ya incluido)</p>
+                    </div>
+                </div>
+
+                <!-- Cash payment impact -->
+                <div x-show="paymentForm.payment_method === 'cash'" class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-slate-700">
+                    <p class="font-semibold mb-1">Impacto:</p>
+                    <p>Checking: $<span x-text="formatNumber(checkingBalance)"></span> → $<span x-text="formatNumber(checkingBalance - paymentForm.expense_amount)"></span></p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button @click="showPaymentModal = false" class="flex-1 bg-slate-200 text-slate-900 px-4 py-2 rounded-lg hover:bg-slate-300 font-semibold">
+                    Cancelar
+                </button>
+                <button @click="processFixedExpensePayment()" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 font-semibold">
+                    ✓ Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Management Modal -->
+    <div x-show="showCategoryModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showCategoryModal = false">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+            <h2 class="text-xl font-bold mb-4 text-purple-700">⚙️ Gestionar Categorías</h2>
+
+            <!-- Add New Category -->
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                <h3 class="font-semibold text-sm mb-3">➕ Agregar Nueva Categoría</h3>
+                <div class="flex gap-2">
+                    <input type="text" x-model="newCategory.icon" class="w-16 px-3 py-2 border border-slate-300 rounded-lg text-center focus:ring-2 focus:ring-purple-500" placeholder="🎯" maxlength="2">
+                    <input type="text" x-model="newCategory.name" class="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Nombre de categoría" @keyup.enter="addCategory()">
+                    <button @click="addCategory()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold">
+                        ➕
+                    </button>
+                </div>
+                <p class="text-xs text-slate-600 mt-2">Tip: Copia un emoji de emojipedia.org</p>
+            </div>
+
+            <!-- Existing Categories -->
+            <div>
+                <h3 class="font-semibold text-sm mb-2">📋 Categorías Actuales:</h3>
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                    <template x-for="cat in expenseCategories" :key="cat.id">
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-200">
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl" x-text="cat.icon"></span>
+                                <span class="font-medium" x-text="cat.name"></span>
+                            </div>
+                            <button @click="deleteCategory(cat.id)" class="text-red-600 hover:text-red-800 text-lg" title="Eliminar">
+                                🗑️
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button @click="showCategoryModal = false" class="w-full bg-slate-200 text-slate-900 px-4 py-2 rounded-lg hover:bg-slate-300 font-semibold">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Fixed Expense Modal -->
+    <div x-show="editingFixedExpense || showAddFixedExpense" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="closeFixedExpenseModal()">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4" x-text="editingFixedExpense ? '✏️ Editar Gasto Fijo' : '➕ Agregar Gasto Fijo'"></h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Nombre del Gasto *</label>
+                    <input type="text" x-model="fixedExpenseForm.name" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Ej: Renta">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Monto *</label>
+                        <input type="number" x-model.number="fixedExpenseForm.amount" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" placeholder="3100" step="0.01">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Día de Vencimiento *</label>
+                        <input type="number" x-model.number="fixedExpenseForm.due_day" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" placeholder="1" min="1" max="31">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Categoría</label>
+                    <input type="text" x-model="fixedExpenseForm.category" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Ej: Vivienda">
+                </div>
+            </div>
+
+            <div class="flex gap-4 mt-6">
+                <button @click="saveFixedExpense()" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 font-semibold">
+                    <span x-text="editingFixedExpense ? 'Guardar Cambios' : 'Agregar Gasto'"></span>
+                </button>
+                <button @click="closeFixedExpenseModal()" class="flex-1 bg-slate-300 text-slate-900 px-4 py-2 rounded-lg hover:bg-slate-400 font-semibold">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deposit Modal -->
+    <div x-show="showDepositModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showDepositModal = false">
+        <div class="bg-white rounded-xl max-w-md w-full p-8 shadow-xl">
+            <h2 class="text-2xl font-bold text-green-700 mb-6">💰 Registrar Depósito</h2>
+
+            <div class="space-y-4">
+                <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <p class="text-sm text-slate-600 mb-1">Balance actual:</p>
+                    <p class="text-2xl font-bold text-green-700">$<span x-text="formatNumber(checkingBalance)"></span></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-900 mb-2">Tipo de Depósito</label>
+                    <select x-model="depositForm.type" class="w-full px-4 py-2 rounded-lg border border-slate-300 bg-white">
+                        <option value="paycheck">💼 Nómina</option>
+                        <option value="bonus">🎁 Bono</option>
+                        <option value="refund">↩️ Reembolso</option>
+                        <option value="transfer">🔄 Transferencia</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-900 mb-2">Monto *</label>
+                    <input type="number" x-model.number="depositForm.amount" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 bg-slate-50" placeholder="0.00" step="0.01">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-900 mb-2">Descripción (Opcional)</label>
+                    <input type="text" x-model="depositForm.description" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 bg-slate-50" placeholder="Nómina del 9 de enero">
+                </div>
+
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <p class="text-sm text-slate-600">Nuevo balance:</p>
+                    <p class="text-2xl font-bold text-blue-700">$<span x-text="formatNumber(checkingBalance + (depositForm.amount || 0))"></span></p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button @click="showDepositModal = false" class="flex-1 px-4 py-2 rounded-lg bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold transition-colors">
+                    Cancelar
+                </button>
+                <button @click="processDeposit()" class="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 font-semibold transition-colors">
+                    Depositar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div x-show="showWithdrawModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showWithdrawModal = false">
+        <div class="bg-white rounded-xl max-w-md w-full p-8 shadow-xl">
+            <h2 class="text-2xl font-bold text-red-700 mb-6">💸 Registrar Retiro</h2>
+
+            <div class="space-y-4">
+                <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <p class="text-sm text-slate-600 mb-1">Balance actual:</p>
+                    <p class="text-2xl font-bold text-red-700">$<span x-text="formatNumber(checkingBalance)"></span></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-900 mb-2">Tipo de Retiro</label>
+                    <select x-model="withdrawForm.type" class="w-full px-4 py-2 rounded-lg border border-slate-300 bg-white">
+                        <option value="cash">💵 Efectivo</option>
+                        <option value="transfer">🔄 Transferencia</option>
+                        <option value="payment">💳 Pago</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-900 mb-2">Monto *</label>
+                    <input type="number" x-model.number="withdrawForm.amount" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 bg-slate-50" placeholder="0.00" step="0.01">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-900 mb-2">Descripción (Opcional)</label>
+                    <input type="text" x-model="withdrawForm.description" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 bg-slate-50" placeholder="Retiro en efectivo">
+                </div>
+
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <p class="text-sm text-slate-600">Nuevo balance:</p>
+                    <p class="text-2xl font-bold" :class="(checkingBalance - (withdrawForm.amount || 0)) >= 0 ? 'text-blue-700' : 'text-red-700'">$<span x-text="formatNumber(checkingBalance - (withdrawForm.amount || 0))"></span></p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button @click="showWithdrawModal = false" class="flex-1 px-4 py-2 rounded-lg bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold transition-colors">
+                    Cancelar
+                </button>
+                <button @click="processWithdraw()" class="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold transition-colors">
+                    Retirar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Card Modal -->
+    <div x-show="showAddCardModal || editingCard" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="closeCardModal()">
+        <div class="bg-white rounded-xl max-w-md w-full p-8 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold text-slate-900 mb-6" x-text="editingCard ? 'Editar Tarjeta' : 'Agregar Nueva Tarjeta'"></h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-900 mb-2">Nombre *</label>
+                    <input type="text" x-model="cardForm.name" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-slate-50" placeholder="Chase Sapphire">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-900 mb-2">Límite de Crédito *</label>
+                    <input type="number" x-model.number="cardForm.credit_limit" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-slate-50" placeholder="20000" step="0.01">
+                </div>
+
+                <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <label class="block text-sm font-semibold text-red-900 mb-2">Saldo Cerrado (A Pagar Este Mes)</label>
+                    <input type="number" x-model.number="cardForm.closed_balance" class="w-full px-4 py-2 rounded-lg border border-red-300 focus:ring-2 focus:ring-red-500 bg-white" placeholder="0" step="0.01">
+                </div>
+
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <label class="block text-sm font-semibold text-blue-900 mb-2">Saldo Abierto (Acumulando)</label>
+                    <input type="number" x-model.number="cardForm.open_balance" class="w-full px-4 py-2 rounded-lg border border-blue-300 focus:ring-2 focus:ring-blue-500 bg-white" placeholder="0" step="0.01">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-900 mb-2">Día Corte *</label>
+                        <input type="number" x-model="cardForm.closing_day" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-slate-50" placeholder="19" min="1" max="31">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-900 mb-2">Día Pago *</label>
+                        <input type="number" x-model="cardForm.payment_due_day" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-slate-50" placeholder="27" min="1" max="31">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button @click="saveCard()" class="flex-1 px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-semibold transition-colors" :aria-label="editingCard ? 'Guardar cambios' : 'Agregar tarjeta'">
+                    <span x-text="editingCard ? 'Guardar' : 'Agregar'"></span>
+                </button>
+                <button @click="closeCardModal()" class="flex-1 px-4 py-2 rounded-lg bg-slate-200 text-slate-900 hover:bg-slate-300 font-semibold transition-colors">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function app() {
+            return {
+                checkingBalance: 0,
+                savings: { balance: 0, target: 15000, progress_pct: 0, remaining: 15000 },
+                cards: [],
+                debtSummary: { total_closed: 0, total_open: 0, total_debt: 0, closed_cards: [], open_cards: [] },
+                income: null,
+                purchaseAmount: 500,
+                purchaseDate: '',
+                purchaseDescription: '',
+                isDeferred: false,
+                numPayments: 6,
+                paymentFrequency: 'monthly',
+                recommendations: [],
+                liquidityAnalysis: null,
+                savedRecommendations: [],
+                newBalance: 0,
+                editingVariableExpense: null,
+                expenseCategories: [],
+                showCategoryModal: false,
+                newCategory: { name: '', icon: '📌' },
+                variableExpense: { category: 'Comida/Restaurantes', amount: 0, description: '', card_id: '', expense_date: new Date().toISOString().split('T')[0] },
+                cardPayment: { card_id: '', amount: 0, payment_date: new Date().toISOString().split('T')[0] },
+                showAddCardModal: false,
+                editingCard: null,
+                editingFixedExpense: null,
+                showAddFixedExpense: false,
+                showDepositModal: false,
+                showWithdrawModal: false,
+                showPaymentModal: false,
+                paymentForm: { expense_id: null, expense_name: '', expense_amount: 0, payment_method: 'cash', card_id: null, already_in_balance: false },
+                depositForm: { type: 'paycheck', amount: 0, description: '' },
+                withdrawForm: { type: 'cash', amount: 0, description: '' },
+                fixedExpenseForm: { name: '', amount: 0, due_day: 1, category: '' },
+                cardForm: { name: '', credit_limit: 0, closed_balance: 0, open_balance: 0, closing_day: 1, payment_due_day: 1, apr: 0 },
+                monthSummary: { fixed_paid: [], fixed_unpaid: [], variable_expenses: [], total_fixed_paid: 0, total_variable: 0, total_card_payments: 0, card_payments: [] },
+                showAIChat: false,
+                aiChatMessages: [],
+                aiChatInput: '',
+                aiChatLoading: false,
+                aiQuickActions: [
+                    { label: '📊 Análisis de gastos', action: 'spending-analysis' },
+                    { label: '💡 Sugerencias', action: 'optimization' },
+                    { label: '🕐 Mejor momento', action: 'savings-time' },
+                    { label: '⚠️ Anomalías', action: 'anomalies' }
+                ],
+
+                async loadDashboard() {
+                    try {
+                        const response = await fetch('/api/dashboard');
+                        const data = await response.json();
+                        this.checkingBalance = data.checking_balance;
+                        this.newBalance = data.checking_balance;
+                        this.savings = data.savings || this.savings;
+                        this.cards = data.cards || [];
+                        this.debtSummary = data.debt_summary || this.debtSummary;
+                        this.income = data.income;
+                        this.expenseCategories = data.expense_categories || [];
+                        await this.loadMonthSummary();
+                    } catch (error) {
+                        console.error('Error loading dashboard:', error);
+                    }
+                },
+
+                async loadMonthSummary() {
+                    try {
+                        const response = await fetch('/api/expenses/this-month');
+                        const data = await response.json();
+                        this.monthSummary = data;
+                    } catch (error) {
+                        console.error('Error loading month summary:', error);
+                    }
+                },
+
+                async getRecommendation() {
+                    if (!this.purchaseAmount || this.purchaseAmount <= 0) {
+                        alert('Por favor ingresa un monto válido');
+                        return;
+                    }
+                    try {
+                        const response = await fetch('/api/recommend', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                amount: parseFloat(this.purchaseAmount),
+                                date: this.purchaseDate || null,
+                                is_deferred: this.isDeferred,
+                                num_payments: this.isDeferred ? parseInt(this.numPayments) : null,
+                                payment_frequency: this.isDeferred ? this.paymentFrequency : null,
+                                description: this.purchaseDescription,
+                                save: true
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.error) {
+                            alert(data.error);
+                            return;
+                        }
+                        this.recommendations = data.recommendations || [];
+                        this.liquidityAnalysis = data.liquidity_analysis || null;
+                        await this.loadSavedRecommendations();
+                        if (data.saved_recommendation) {
+                            alert('✅ Recomendación guardada');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al obtener recomendación');
+                    }
+                },
+
+                async loadSavedRecommendations() {
+                    try {
+                        const response = await fetch('/api/recommendations');
+                        const data = await response.json();
+                        this.savedRecommendations = data.recommendations || [];
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                },
+
+                async updateBalance() {
+                    if (!this.newBalance || this.newBalance < 0) {
+                        alert('Ingresa un balance válido');
+                        return;
+                    }
+                    try {
+                        const response = await fetch('/api/balance/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ balance: parseFloat(this.newBalance) })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.checkingBalance = data.new_balance;
+                            alert(`✅ Balance actualizado: $${this.formatNumber(data.new_balance)}`);
+                        }
+                    } catch (error) {
+                        console.error('Error updating balance:', error);
+                        alert('Error al actualizar balance');
+                    }
+                },
+
+                markFixedExpensePaid(expenseId) {
+                    const expense = this.monthSummary.fixed_unpaid.find(e => e.id == expenseId);
+                    if (!expense) return;
+                    this.paymentForm = {
+                        expense_id: expenseId,
+                        expense_name: expense.name,
+                        expense_amount: expense.amount,
+                        payment_method: 'cash',
+                        card_id: null,
+                        already_in_balance: false
+                    };
+                    this.showPaymentModal = true;
+                },
+
+                async processFixedExpensePayment() {
+                    const form = this.paymentForm;
+                    if (!form.expense_id) {
+                        alert('Error: No se seleccionó gasto');
+                        return;
+                    }
+                    if (form.payment_method === 'card' && !form.card_id) {
+                        alert('Selecciona una tarjeta');
+                        return;
+                    }
+                    try {
+                        const today = new Date().toISOString().split('T')[0];
+                        const response = await fetch('/api/expenses/fixed/mark-paid', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                expense_id: form.expense_id,
+                                amount: form.expense_amount,
+                                payment_date: today + 'T12:00:00',
+                                payment_method: form.payment_method,
+                                card_id: form.card_id,
+                                already_in_balance: form.already_in_balance
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.showPaymentModal = false;
+                            await this.loadMonthSummary();
+                            await this.loadDashboard();
+                            alert(`✅ ${form.expense_name} marcado como pagado`);
+                        } else {
+                            alert(data.error || 'Error al marcar gasto como pagado');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al procesar pago');
+                    }
+                },
+
+                showAddFixedExpenseModal() {
+                    this.showAddFixedExpense = true;
+                    this.fixedExpenseForm = { name: '', amount: 0, due_day: 1, category: '' };
+                },
+
+                editFixedExpense(expense) {
+                    this.editingFixedExpense = expense.id;
+                    this.fixedExpenseForm = {
+                        name: expense.name,
+                        amount: expense.amount,
+                        due_day: expense.due_day,
+                        category: expense.category || ''
+                    };
+                },
+
+                closeFixedExpenseModal() {
+                    this.editingFixedExpense = null;
+                    this.showAddFixedExpense = false;
+                    this.fixedExpenseForm = { name: '', amount: 0, due_day: 1, category: '' };
+                },
+
+                async saveFixedExpense() {
+                    if (!this.fixedExpenseForm.name || !this.fixedExpenseForm.amount) {
+                        alert('Por favor completa nombre y monto');
+                        return;
+                    }
+                    if (this.fixedExpenseForm.due_day < 1 || this.fixedExpenseForm.due_day > 31) {
+                        alert('Día de vencimiento debe estar entre 1 y 31');
+                        return;
+                    }
+                    try {
+                        let response;
+                        if (this.editingFixedExpense) {
+                            response = await fetch(`/api/expenses/fixed/${this.editingFixedExpense}/edit`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(this.fixedExpenseForm)
+                            });
+                        } else {
+                            response = await fetch('/api/expenses/fixed/add', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(this.fixedExpenseForm)
+                            });
+                        }
+                        const data = await response.json();
+                        if (data.success) {
+                            await this.loadMonthSummary();
+                            this.closeFixedExpenseModal();
+                            alert(this.editingFixedExpense ? '✅ Gasto fijo actualizado' : '✅ Gasto fijo agregado');
+                        } else {
+                            alert(data.error || 'Error al guardar gasto fijo');
+                        }
+                    } catch (error) {
+                        console.error('Error saving fixed expense:', error);
+                        alert('Error al guardar cambios');
+                    }
+                },
+
+                async addVariableExpense() {
+                    if (!this.variableExpense.amount || this.variableExpense.amount <= 0) {
+                        alert('Ingresa un monto válido');
+                        return;
+                    }
+                    try {
+                        const response = await fetch('/api/expenses/variable/add', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                category: this.variableExpense.category,
+                                amount: parseFloat(this.variableExpense.amount),
+                                description: this.variableExpense.description,
+                                card_id: this.variableExpense.card_id || null,
+                                expense_date: this.variableExpense.expense_date + 'T12:00:00'
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.checkingBalance = data.new_balance;
+                            this.variableExpense = { category: 'Comida/Restaurantes', amount: 0, description: '', card_id: '', expense_date: new Date().toISOString().split('T')[0] };
+                            await this.loadMonthSummary();
+                            await this.loadDashboard();
+                            alert(`✅ Gasto registrado: $${data.expense.amount}`);
+                        }
+                    } catch (error) {
+                        console.error('Error adding variable expense:', error);
+                        alert('Error al registrar gasto');
+                    }
+                },
+
+                editVariableExpense(expense) {
+                    this.editingVariableExpense = expense.id;
+                    this.variableExpense = {
+                        category: expense.category,
+                        amount: expense.amount,
+                        description: expense.description,
+                        card_id: expense.card_id || '',
+                        expense_date: expense.expense_date.split('T')[0]
+                    };
+                },
+
+                cancelEditVariableExpense() {
+                    this.editingVariableExpense = null;
+                    this.variableExpense = { category: 'Comida/Restaurantes', amount: 0, description: '', card_id: '', expense_date: new Date().toISOString().split('T')[0] };
+                },
+
+                async saveEditVariableExpense() {
+                    if (!this.variableExpense.amount || this.variableExpense.amount <= 0) {
+                        alert('Ingresa un monto válido');
+                        return;
+                    }
+                    try {
+                        const response = await fetch(`/api/expenses/variable/${this.editingVariableExpense}/edit`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                category: this.variableExpense.category,
+                                amount: parseFloat(this.variableExpense.amount),
+                                description: this.variableExpense.description,
+                                card_id: this.variableExpense.card_id || null,
+                                expense_date: this.variableExpense.expense_date + 'T12:00:00'
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            await this.loadMonthSummary();
+                            this.cancelEditVariableExpense();
+                            alert('✅ Gasto actualizado');
+                        }
+                    } catch (error) {
+                        console.error('Error updating variable expense:', error);
+                        alert('Error al actualizar gasto');
+                    }
+                },
+
+                async deleteVariableExpense(expenseId) {
+                    if (!confirm('¿Eliminar este gasto?')) return;
+                    try {
+                        const response = await fetch(`/api/expenses/variable/${expenseId}/delete`, {
+                            method: 'DELETE'
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            await this.loadMonthSummary();
+                            alert('✅ Gasto eliminado');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al eliminar gasto');
+                    }
+                },
+
+                async addCategory() {
+                    if (!this.newCategory.name || !this.newCategory.icon) {
+                        alert('Completa nombre e icono');
+                        return;
+                    }
+                    try {
+                        const response = await fetch('/api/expense-categories/add', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newCategory)
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.expenseCategories = data.categories || [];
+                            this.newCategory = { name: '', icon: '📌' };
+                            alert('✅ Categoría agregada');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al agregar categoría');
+                    }
+                },
+
+                async deleteCategory(categoryId) {
+                    if (!confirm('¿Eliminar esta categoría?')) return;
+                    try {
+                        const response = await fetch(`/api/expense-categories/${categoryId}/delete`, {
+                            method: 'DELETE'
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.expenseCategories = data.categories || [];
+                            alert('✅ Categoría eliminada');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al eliminar categoría');
+                    }
+                },
+
+                async payCard() {
+                    if (!this.cardPayment.card_id || !this.cardPayment.amount) {
+                        alert('Completa tarjeta y monto');
+                        return;
+                    }
+                    try {
+                        const response = await fetch('/api/cards/pay', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.cardPayment)
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            await this.loadDashboard();
+                            await this.loadMonthSummary();
+                            this.cardPayment = { card_id: '', amount: 0, payment_date: new Date().toISOString().split('T')[0] };
+                            alert('✅ Pago registrado');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al registrar pago');
+                    }
+                },
+
+                async processDeposit() {
+                    if (!this.depositForm.amount || this.depositForm.amount <= 0) {
+                        alert('Ingresa un monto válido');
+                        return;
+                    }
+                    try {
+                        const newBalance = this.checkingBalance + this.depositForm.amount;
+                        const response = await fetch('/api/balance/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ balance: newBalance })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.checkingBalance = data.balance;
+                            this.depositForm = { type: 'paycheck', amount: 0, description: '' };
+                            this.showDepositModal = false;
+                            alert('✅ Depósito registrado');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al registrar depósito');
+                    }
+                },
+
+                async processWithdraw() {
+                    if (!this.withdrawForm.amount || this.withdrawForm.amount <= 0) {
+                        alert('Ingresa un monto válido');
+                        return;
+                    }
+                    if (this.checkingBalance - this.withdrawForm.amount < 0) {
+                        alert('Balance insuficiente');
+                        return;
+                    }
+                    try {
+                        const newBalance = this.checkingBalance - this.withdrawForm.amount;
+                        const response = await fetch('/api/balance/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ balance: newBalance })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.checkingBalance = data.balance;
+                            this.withdrawForm = { type: 'cash', amount: 0, description: '' };
+                            this.showWithdrawModal = false;
+                            alert('✅ Retiro registrado');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al registrar retiro');
+                    }
+                },
+
+                editCard(card) {
+                    this.editingCard = card.id;
+                    this.cardForm = {
+                        name: card.name,
+                        credit_limit: card.credit_limit,
+                        closed_balance: card.closed_statement.balance,
+                        open_balance: card.open_statement.balance,
+                        closing_day: card.closing_day,
+                        payment_due_day: card.payment_due_day,
+                        apr: card.apr || 0
+                    };
+                },
+
+                closeCardModal() {
+                    this.showAddCardModal = false;
+                    this.editingCard = null;
+                    this.cardForm = { name: '', credit_limit: 0, closed_balance: 0, open_balance: 0, closing_day: 1, payment_due_day: 1, apr: 0 };
+                },
+
+                async saveCard() {
+                    if (!this.cardForm.name || !this.cardForm.credit_limit || !this.cardForm.closing_day || !this.cardForm.payment_due_day) {
+                        alert('Completa todos los campos requeridos (*)');
+                        return;
+                    }
+                    try {
+                        let response;
+                        if (this.editingCard) {
+                            response = await fetch(`/api/cards/${this.editingCard}/edit`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(this.cardForm)
+                            });
+                        } else {
+                            response = await fetch('/api/cards/add', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(this.cardForm)
+                            });
+                        }
+                        const data = await response.json();
+                        if (data.success) {
+                            await this.loadDashboard();
+                            this.closeCardModal();
+                            alert(this.editingCard ? '✅ Tarjeta actualizada' : '✅ Tarjeta agregada');
+                        } else {
+                            alert(data.error || 'Error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al guardar tarjeta');
+                    }
+                },
+
+                async deleteCard(card) {
+                    if (!confirm(`¿Eliminar "${card.name}"?`)) return;
+                    try {
+                        const response = await fetch(`/api/cards/${card.id}/delete`, { method: 'DELETE' });
+                        const data = await response.json();
+                        if (data.success) {
+                            await this.loadDashboard();
+                            alert('✅ Tarjeta eliminada');
+                        } else {
+                            alert(data.error || 'Error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al eliminar tarjeta');
+                    }
+                },
+
+                async sendAIMessage() {
+                    if (!this.aiChatInput.trim() || this.aiChatLoading) return;
+                    const userMessage = this.aiChatInput.trim();
+                    this.aiChatMessages.push({ role: 'user', content: userMessage });
+                    this.aiChatInput = '';
+                    this.aiChatLoading = true;
+                    try {
+                        const response = await fetch('/api/insights/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: userMessage, conversation_history: this.aiChatMessages.slice(-6) })
+                        });
+                        const data = await response.json();
+                        if (data.error) {
+                            this.aiChatMessages.push({ role: 'assistant', content: '❌ ' + (data.error || 'Error') });
+                        } else {
+                            this.aiChatMessages.push({ role: 'assistant', content: data.response });
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.aiChatMessages.push({ role: 'assistant', content: '❌ Error de conexión' });
+                    } finally {
+                        this.aiChatLoading = false;
+                        this.$nextTick(() => {
+                            const container = document.getElementById('ai-chat-messages');
+                            if (container) container.scrollTop = container.scrollHeight;
+                        });
+                    }
+                },
+
+                async executeQuickAction(action) {
+                    this.aiChatLoading = true;
+                    const endpoints = {
+                        'spending-analysis': '/api/insights/spending-analysis',
+                        'optimization': '/api/insights/optimization-suggestions',
+                        'savings-time': '/api/insights/best-savings-time',
+                        'anomalies': '/api/insights/anomalies'
+                    };
+                    const labels = {
+                        'spending-analysis': '📊 Análisis de gastos',
+                        'optimization': '💡 Sugerencias',
+                        'savings-time': '🕐 Mejor momento',
+                        'anomalies': '⚠️ Anomalías'
+                    };
+                    this.aiChatMessages.push({ role: 'user', content: labels[action] });
+                    try {
+                        const response = await fetch(endpoints[action]);
+                        const data = await response.json();
+                        let content = data.error ? '❌ ' + data.error : (data.analysis || data.suggestions || data.recommendation || data.explanation || JSON.stringify(data, null, 2));
+                        this.aiChatMessages.push({ role: 'assistant', content });
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.aiChatMessages.push({ role: 'assistant', content: '❌ Error al ejecutar' });
+                    } finally {
+                        this.aiChatLoading = false;
+                        this.$nextTick(() => {
+                            const container = document.getElementById('ai-chat-messages');
+                            if (container) container.scrollTop = container.scrollHeight;
+                        });
+                    }
+                },
+
+                formatNumber(num) {
+                    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+                },
+
+                formatDate(dateStr) {
+                    const date = new Date(dateStr);
+                    return new Intl.DateTimeFormat('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
